@@ -1,0 +1,3 @@
+symbol: AAPL
+fast_window: 50
+slow_window: 200

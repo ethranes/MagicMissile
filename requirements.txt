@@ -8,3 +8,4 @@ pydantic-settings
 SQLAlchemy>=2.0
 plotly
 kaleido
+pytest-asyncio

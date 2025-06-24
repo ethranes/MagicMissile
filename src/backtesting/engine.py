@@ -10,7 +10,12 @@ import pandas as pd
 from src.strategies.base import Strategy
 from src.strategies.signal import SignalType
 
-from .events import FillEvent, MarketEvent, OrderEvent, SignalEvent
+from src.orders.order import Order
+from src.orders.order_book import OrderBook
+from src.orders.types import OrderType
+from src.portfolio.manager import PortfolioManager
+
+from .events import FillEvent, MarketEvent, SignalEvent
 
 
 @dataclass
@@ -73,12 +78,12 @@ class BacktestEngine:
             set().union(*[df.index.to_pydatetime().tolist() for df in data.values()])
         )
         self.strategies = strategies
-        self.portfolio = Portfolio(starting_cash)
+        self.portfolio = PortfolioManager(starting_cash)
         self.commission = commission
         self.slippage_pct = slippage_pct
         self.progress_interval = progress_interval
-        # book of orders that execute immediately at market price next bar
-        self._pending_orders: List[OrderEvent] = []
+        # Use new order-book for tracking and matching orders
+        self.order_book = OrderBook()
 
     # ------------------------------------------------------------------
     def _price_at(self, symbol: str, time: datetime) -> float | None:
@@ -103,31 +108,35 @@ class BacktestEngine:
         for sig in signals.values():
             if sig.signal_type == SignalType.HOLD:
                 continue
-            order = OrderEvent(
+            order = Order(
                 symbol=sig.symbol,
-                time=time,
-                order_type=sig.signal_type,
+                side=sig.signal_type,
+                order_type=OrderType.MARKET,
                 quantity=100,  # fixed lot for demo
             )
-            self._pending_orders.append(order)
+            self.order_book.add_order(order)
 
     # ------------------------------------------------------------------
     def _execute_orders(self, time: datetime) -> None:
-        for order in list(self._pending_orders):
-            price = self._price_at(order.symbol, time)
-            if price is None:
-                continue  # skip if no price yet
-            slip_price = price * (1 + self.slippage_pct) if order.order_type == SignalType.BUY else price * (1 - self.slippage_pct)
-            fill = FillEvent(
-                symbol=order.symbol,
-                time=time,
-                fill_type=order.order_type,
-                quantity=order.quantity,
-                price=slip_price,
+        for sym in self.symbols:
+            if time not in self.data[sym].index:
+                continue
+            row = self.data[sym].loc[time]
+            # Handle datasets that may only contain Close values
+            close = float(row["Close"])
+            high = float(row.get("High", close))
+            low = float(row.get("Low", close))
+
+            fills = self.order_book.process_bar(
+                sym,
+                time,
+                price=close,
+                high=high,
+                low=low,
                 commission=self.commission,
             )
-            self.portfolio.update_with_fill(fill)
-            self._pending_orders.remove(order)
+            for fill in fills:
+                self.portfolio.update_with_fill(fill)
 
     # ------------------------------------------------------------------
     def run(self) -> pd.DataFrame:

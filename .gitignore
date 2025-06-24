@@ -18,7 +18,6 @@ build/
 # Logs and data
 logs/
 reports/
-data/
 
 # IDEs and editors
 .vscode/

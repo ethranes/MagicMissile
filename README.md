@@ -46,6 +46,16 @@ print(f"HTML report: {html_path}\nPDF report: {pdf_path}")
 
 Performance metrics (total return, Sharpe, drawdown, etc.) are available via `src.backtesting.metrics`.
 
+## Paper Trading (Demo Account)
+
+Run a live/paper session that polls quotes and executes trades in a simulated account:
+
+```bash
+python run_paper_trade.py --symbol AAPL --strategy buy_and_hold --refresh 60 --max-ticks 120
+```
+
+The script writes an interactive HTML report to `reports/` when it stops.
+
 ## Order Management
 
 An in-memory `OrderBook` (`src/orders/order_book.py`) powers order matching during backtests.  The `Order` class encapsulates order details & lifecycle, while `OrderManager` provides additional validation and routing utilities.
@@ -60,6 +70,17 @@ Key features:
 
 ## Project Structure
 Refer to `PLANNING.md` for a full breakdown of directories and components.
+
+## Documentation
+
+Additional guides live under [`docs/`](docs/):
+
+* [API Reference](docs/api.md)
+* [Strategy Development Tutorial](docs/strategy_tutorial.md)
+* [Configuration Guide](docs/configuration_guide.md)
+* [Troubleshooting](docs/troubleshooting.md)
+* [Performance Optimisation Tips](docs/performance_tips.md)
+* [Deployment Guide](docs/deployment.md)
 
 ## Development
 

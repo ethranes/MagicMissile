@@ -31,8 +31,14 @@ class PerformanceSummary:
 # ---------------------------------------------------------------------------
 
 def _returns(equity: pd.Series) -> pd.Series:  # noqa: D401
-    ret = equity.pct_change().dropna()
-    return ret
+    """Return percentage change series of *equity*.
+
+    The default behaviour of :py:meth:`pandas.Series.pct_change` forward-fills
+    missing values.  Starting with pandas 2.2 this behaviour is deprecated and
+    will raise in a future release.  We therefore explicitly pass
+    ``fill_method=None`` to opt-out of filling.
+    """
+    return equity.pct_change(fill_method=None).dropna()
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +54,12 @@ def annualized_return(equity: pd.Series) -> float:  # noqa: D401
 
 def volatility(equity: pd.Series) -> float:  # noqa: D401
     ret = _returns(equity)
-    return ret.std(ddof=0) * np.sqrt(TRADING_DAYS)
+    if ret.empty:
+        return np.nan
+    sd = ret.std(ddof=0)
+    if np.isnan(sd):
+        return 0.0
+    return sd * np.sqrt(TRADING_DAYS)
 
 
 def sharpe_ratio(equity: pd.Series, risk_free: float = 0.0) -> float:  # noqa: D401
